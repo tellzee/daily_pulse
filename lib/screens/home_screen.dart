@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -8,6 +9,7 @@ import '../models/emotion_entry.dart';
 import 'emotion_selection_screen.dart';
 import 'statistics_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'links_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
 
   List<EmotionEntry> _getEntriesForDay(
-      List<EmotionEntry> allEntries, DateTime day) {
+    List<EmotionEntry> allEntries,
+    DateTime day,
+  ) {
     return allEntries.where((entry) {
       return entry.timestamp.year == day.year &&
           entry.timestamp.month == day.month &&
@@ -35,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daily Pulse'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -44,6 +49,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                   builder: (context) => const StatisticsScreen(),
                 ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.link),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LinksScreen()),
               );
             },
           ),
@@ -75,8 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          final selectedDayEntries =
-              _getEntriesForDay(provider.entries, _selectedDay);
+          final selectedDayEntries = _getEntriesForDay(
+            provider.entries,
+            _selectedDay,
+          );
 
           return Column(
             children: [
@@ -135,119 +151,136 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const Divider(),
               Expanded(
-                child: selectedDayEntries.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'No emotions recorded for ${DateFormat.yMMMd().format(_selectedDay)}',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 16),
-                            if (isSameDay(_selectedDay, DateTime.now()))
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const EmotionSelectionScreen(),
-                                    ),
-                                  );
-                                },
-                                child: const Text('Track Your Mood'),
+                child:
+                    selectedDayEntries.isEmpty
+                        ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'No emotions recorded for ${DateFormat.yMMMd().format(_selectedDay)}',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: selectedDayEntries.length,
-                        itemBuilder: (context, index) {
-                          final entry = selectedDayEntries[index];
-                          final emotion = predefinedEmotions.firstWhere(
-                            (e) => e.id == entry.emotionId,
-                            orElse: () => Emotion(
-                              id: entry.emotionId,
-                              name: entry.customEmotion ?? 'Unknown',
-                              emoji: entry.customEmoji ?? '❓',
-                              color: const Color(0xFF607D8B),
-                            ),
-                          );
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: Column(
-                              children: [
-                                ListTile(
-                                  leading: Text(
-                                    emotion.emoji,
-                                    style: const TextStyle(fontSize: 32),
-                                  ),
-                                  title: Text(emotion.name),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (entry.reason != null) ...[
-                                        Text(entry.reason!),
-                                        const SizedBox(height: 4),
-                                      ],
-                                      Text(
-                                        DateFormat.jm().format(entry.timestamp),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
+                              const SizedBox(height: 16),
+                              if (isSameDay(_selectedDay, DateTime.now()))
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const EmotionSelectionScreen(),
                                       ),
-                                    ],
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_note),
-                                        onPressed: () =>
-                                            _showNoteDialog(context, entry),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () =>
-                                            provider.deleteEntry(entry.id),
-                                      ),
-                                    ],
-                                  ),
+                                    );
+                                  },
+                                  child: const Text('Track Your Mood'),
                                 ),
-                                if (entry.note != null &&
-                                    entry.note!.isNotEmpty) ...[
-                                  const Divider(),
-                                  Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
+                            ],
+                          ),
+                        )
+                        : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: selectedDayEntries.length,
+                          itemBuilder: (context, index) {
+                            final entry = selectedDayEntries[index];
+                            final emotion = predefinedEmotions.firstWhere(
+                              (e) => e.id == entry.emotionId,
+                              orElse:
+                                  () => Emotion(
+                                    id: entry.emotionId,
+                                    name: entry.customEmotion ?? 'Unknown',
+                                    emoji: entry.customEmoji ?? '❓',
+                                    color: const Color(0xFF607D8B),
+                                  ),
+                            );
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                children: [
+                                  ListTile(
+                                    leading: Text(
+                                      emotion.emoji,
+                                      style: const TextStyle(fontSize: 32),
+                                    ),
+                                    title: Text(emotion.name),
+                                    subtitle: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
+                                        if (entry.reason != null) ...[
+                                          Text(entry.reason!),
+                                          const SizedBox(height: 4),
+                                        ],
                                         Text(
-                                          'Note:',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall,
-                                        ),
-                                        const SizedBox(height: 8),
-                                        RichText(
-                                          text: TextSpan(
-                                            children: _buildTextSpans(entry.note!, context),
+                                          DateFormat.jm().format(
+                                            entry.timestamp,
                                           ),
+                                          style:
+                                              Theme.of(
+                                                context,
+                                              ).textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit_note),
+                                          onPressed:
+                                              () => _showNoteDialog(
+                                                context,
+                                                entry,
+                                              ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                          onPressed:
+                                              () => provider.deleteEntry(
+                                                entry.id,
+                                              ),
                                         ),
                                       ],
                                     ),
                                   ),
+                                  if (entry.note != null &&
+                                      entry.note!.isNotEmpty) ...[
+                                    const Divider(),
+                                    Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Note:',
+                                            style:
+                                                Theme.of(
+                                                  context,
+                                                ).textTheme.titleSmall,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          RichText(
+                                            text: TextSpan(
+                                              children: _buildTextSpans(
+                                                entry.note!,
+                                                context,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ],
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                              ),
+                            );
+                          },
+                        ),
               ),
             ],
           );
@@ -272,41 +305,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add/Edit Note'),
-        content: TextField(
-          controller: textController,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: 'Write your thoughts...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<EmotionProvider>().updateNote(
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Add/Edit Note'),
+            content: TextField(
+              controller: textController,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                hintText: 'Write your thoughts...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<EmotionProvider>().updateNote(
                     entry.id,
                     textController.text,
                   );
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
   List<TextSpan> _buildTextSpans(String text, BuildContext context) {
-    final urlPattern = RegExp(
-      r'((https?:\/\/)?([\w\-]+\.)+[\w\-]+(\/[\w\-._~:\/?#[\]@!$&\'()*+,;=]*)?)',
-      caseSensitive: false,
-    );
+    final urlPattern = RegExp(r'https?://[^\s]+', caseSensitive: false);
 
     final matches = urlPattern.allMatches(text);
     int lastMatchEnd = 0;
@@ -314,30 +345,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
     for (final match in matches) {
       if (match.start > lastMatchEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastMatchEnd, match.start),
-          style: Theme.of(context).textTheme.bodyText2,
-        ));
+        spans.add(
+          TextSpan(
+            text: text.substring(lastMatchEnd, match.start),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        );
       }
 
       final url = text.substring(match.start, match.end);
-      spans.add(TextSpan(
-        text: url,
-        style: TextStyle(color: Colors.blue),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () {
-            launch(url.startsWith('http') ? url : 'http://$url');
-          },
-      ));
+      spans.add(
+        TextSpan(
+          text: url,
+          style: const TextStyle(color: Colors.blue),
+          recognizer:
+              TapGestureRecognizer()
+                ..onTap = () async {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not launch $url')),
+                      );
+                    }
+                  }
+                },
+        ),
+      );
 
       lastMatchEnd = match.end;
     }
 
     if (lastMatchEnd < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastMatchEnd),
-        style: Theme.of(context).textTheme.bodyText2,
-      ));
+      spans.add(
+        TextSpan(
+          text: text.substring(lastMatchEnd),
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
     }
 
     return spans;
