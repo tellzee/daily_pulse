@@ -6,6 +6,7 @@ import '../models/emotion.dart';
 import '../providers/emotion_provider.dart';
 import '../models/emotion_entry.dart';
 import 'emotion_selection_screen.dart';
+import 'statistics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Daily Pulse'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StatisticsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<EmotionProvider>(
         builder: (context, provider, child) {
