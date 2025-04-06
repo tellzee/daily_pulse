@@ -7,6 +7,7 @@ import '../providers/emotion_provider.dart';
 import '../models/emotion_entry.dart';
 import 'emotion_selection_screen.dart';
 import 'statistics_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -101,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 eventLoader: (day) {
                   return _getEntriesForDay(provider.entries, day);
                 },
-                calendarStyle: CalendarStyle(
+                calendarStyle: const CalendarStyle(
                   markersMaxCount: 1,
                   markerDecoration: BoxDecoration(
                     color: Colors.blue,
@@ -118,16 +119,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 headerStyle: HeaderStyle(
                   formatButtonDecoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                    borderRadius: const BorderRadius.all(Radius.circular(20.0)),
                     border: Border.all(color: Colors.grey),
                   ),
-                  formatButtonTextStyle: TextStyle(color: Colors.black87),
+                  formatButtonTextStyle: const TextStyle(color: Colors.black87),
                   formatButtonShowsNext: false,
                   titleCentered: true,
-                  leftChevronIcon: Icon(Icons.chevron_left),
-                  rightChevronIcon: Icon(Icons.chevron_right),
+                  leftChevronIcon: const Icon(Icons.chevron_left),
+                  rightChevronIcon: const Icon(Icons.chevron_right),
                 ),
-                daysOfWeekStyle: DaysOfWeekStyle(
+                daysOfWeekStyle: const DaysOfWeekStyle(
                   weekdayStyle: TextStyle(color: Colors.black87),
                   weekendStyle: TextStyle(color: Colors.black87),
                 ),
@@ -233,7 +234,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                               .titleSmall,
                                         ),
                                         const SizedBox(height: 8),
-                                        Text(entry.note!),
+                                        RichText(
+                                          text: TextSpan(
+                                            children: _buildTextSpans(entry.note!, context),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -295,5 +300,46 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  List<TextSpan> _buildTextSpans(String text, BuildContext context) {
+    final urlPattern = RegExp(
+      r'((https?:\/\/)?([\w\-]+\.)+[\w\-]+(\/[\w\-._~:\/?#[\]@!$&\'()*+,;=]*)?)',
+      caseSensitive: false,
+    );
+
+    final matches = urlPattern.allMatches(text);
+    int lastMatchEnd = 0;
+    final spans = <TextSpan>[];
+
+    for (final match in matches) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: Theme.of(context).textTheme.bodyText2,
+        ));
+      }
+
+      final url = text.substring(match.start, match.end);
+      spans.add(TextSpan(
+        text: url,
+        style: TextStyle(color: Colors.blue),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () {
+            launch(url.startsWith('http') ? url : 'http://$url');
+          },
+      ));
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: Theme.of(context).textTheme.bodyText2,
+      ));
+    }
+
+    return spans;
   }
 }
